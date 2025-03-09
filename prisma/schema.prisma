@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id            Int      @id @default(autoincrement())
+  chave         String
+  razaoSocial   String?
+  nomeFantasia  String?
+  contato       String?
+  cpf           String?
+  cnpj          String?
+  endereco      String?
+  numero        String?
+  bairro        String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  inscMunicipal String?
+  atividade     String?
+  email         String?
+  fone          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  contratos   Contrato[]
+  faturamento Faturamento[]
+}
+
+model Contrato {
+  id               Int       @id @default(autoincrement())
+  chave            String
+  clienteId        Int
+  dataEmissao      DateTime?
+  dataVencimento   DateTime
+  programaId       Int
+  numInsercoes     Int?
+  valor            Decimal?  @db.Decimal(10, 2)
+  corretorId       Int?
+  comissao         Float?
+  diaVencimento    Int?
+  formaPagamentoId Int?
+  status           String?
+  descritivo       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  cliente        Cliente         @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  programacao    Programacao     @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  formaPagamento FormaPagamento? @relation(fields: [formaPagamentoId], references: [id])
+  faturamento    Faturamento[]
+}
+
+model Faturamento {
+  id               Int       @id @default(autoincrement())
+  chave            String
+  clienteId        Int
+  contratoId       Int
+  programaId       Int
+  corretoresId     Int?
+  comissao         Float?
+  dataEmissao      DateTime?
+  dataVencimento   DateTime?
+  dataPagamento    DateTime?
+  valor            Decimal?  @db.Decimal(10, 2)
+  formaPagamentoId Int?
+  descritivo       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  cliente    Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  contrato   Contrato    @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  programa   Programacao @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  corretores Corretores? @relation(fields: [corretoresId], references: [id])
+}
+
+model Corretores {
+  id           Int       @id @default(autoincrement())
+  chave        String
+  nome         String
+  endereco     String?
+  email        String?
+  fone         String?
+  dataAdmissao DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  faturamento Faturamento[]
+}
+
+model FormaPagamento {
+  id             Int        @id @default(autoincrement())
+  chave          String
+  formaPagamento String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  contrato       Contrato[]
+}
+
+model Programacao {
+  id               Int      @id @default(autoincrement())
+  chave            String
+  programa         String?
+  horaInicio       String?
+  horaFim          String?
+  apresentador     String?
+  diasApresentacao String?
+  valorPatrocinio  Decimal? @db.Decimal(10, 2)
+  estilo           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  faturamento Faturamento[]
+  contrato    Contrato[]
+}
+
+model Logs {
+  id        Int      @id @default(autoincrement())
+  chave     String
+  tipo      String
+  tabela    String
+  mensagem  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
