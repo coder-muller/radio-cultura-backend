@@ -73,10 +73,11 @@ model Faturamento {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  cliente    Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  contrato   Contrato    @relation(fields: [contratoId], references: [id], onDelete: Cascade)
-  programa   Programacao @relation(fields: [programaId], references: [id], onDelete: Cascade)
-  corretores Corretores? @relation(fields: [corretoresId], references: [id])
+  cliente    Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  contrato   Contrato     @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  programa   Programacao  @relation(fields: [programaId], references: [id], onDelete: Cascade)
+  corretores Corretores?  @relation(fields: [corretoresId], references: [id])
+  Lancamento Lancamento[]
 }
 
 model Corretores {
@@ -125,6 +126,46 @@ model Logs {
   tipo      String
   tabela    String
   mensagem  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Módulo Financeiro
+
+model Categoria {
+  id         Int          @id @default(autoincrement())
+  chave      String
+  descricao  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Lancamento Lancamento[]
+}
+
+model Departamento {
+  id         Int          @id @default(autoincrement())
+  chave      String
+  descricao  String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Lancamento Lancamento[]
+}
+
+model Lancamento {
+  id        Int      @id @default(autoincrement())
+  chave     String
+  descricao String
+  valor     Decimal  @db.Decimal(10, 2)
+  data      DateTime
+  natureza  String
+
+  categoriaId    Int
+  departamentoId Int
+  faturaId       Int?
+
+  categoria    Categoria    @relation(fields: [categoriaId], references: [id])
+  departamento Departamento @relation(fields: [departamentoId], references: [id])
+  fatura       Faturamento? @relation(fields: [faturaId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

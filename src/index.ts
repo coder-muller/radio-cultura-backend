@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import cors from "cors";
 import express from "express";
+import categorias from "./routes/financeiro/categorias";
+import departamentos from "./routes/financeiro/departamentos";
+import lancamentos from "./routes/financeiro/lancamentos";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -9,6 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 5555;
 const prisma = new PrismaClient();
 
+app.use("/financeiro/categorias", categorias);
+app.use("/financeiro/departamentos", departamentos);
+app.use("/financeiro/lancamentos", lancamentos);
 
 app.use(express.json());
 app.use(cors({
@@ -121,7 +127,7 @@ app.post("/clientes", async (req, res) => {
         });
 
         await prisma.logs.create({
-            data:{
+            data: {
                 chave: cliente.chave,
                 tipo: "Insersão",
                 tabela: "Clientes",
@@ -249,7 +255,7 @@ app.put("/clientes/:id", async (req, res) => {
         });
 
         await prisma.logs.create({
-            data:{
+            data: {
                 chave: cliente.chave,
                 tipo: "Edição",
                 tabela: "Clientes",
@@ -399,7 +405,7 @@ app.post("/contratos", async (req, res) => {
                 status,
                 descritivo
             },
-            include:{
+            include: {
                 cliente: true
             }
         });
@@ -518,7 +524,7 @@ app.put("/contratos/:id", async (req, res) => {
                 status,
                 descritivo
             },
-            include:{
+            include: {
                 cliente: true
             }
         });
@@ -561,7 +567,7 @@ app.delete("/contratos/:id", async (req, res) => {
             data: {
                 chave: contrato.chave,
                 tipo: "Exclusão",
-                tabela: "Contratos",               
+                tabela: "Contratos",
                 mensagem: `Excluído contrato com id: ${id}, Nome Fantesia do Cliente: ${contrato.cliente.nomeFantasia}`,
             }
         })
@@ -855,7 +861,7 @@ app.put('/faturamento/:id/pagamento', async (req, res) => {
         });
 
         await prisma.logs.create({
-            data:{
+            data: {
                 chave: faturamento.chave,
                 tipo: "Pagamento",
                 tabela: "Faturamento",
@@ -896,7 +902,7 @@ app.delete("/faturamento/:id", async (req, res) => {
                 chave: faturamento.chave,
                 tipo: "Exclusão",
                 tabela: "Faturamento",
-                mensagem: `Excluído fatura com id: ${id}, Nome Fantesia do Cliente: ${faturamento.cliente.nomeFantasia} com valor de: R$${faturamento.valor?.toFixed(2).toString().replace('.', ',')} e com vencimento para: ${faturamento.dataVencimento?.toLocaleDateString('pt-BR')} que ${faturamento.dataPagamento? 'já foi paga' : 'ainda não foi paga'}`,
+                mensagem: `Excluído fatura com id: ${id}, Nome Fantesia do Cliente: ${faturamento.cliente.nomeFantasia} com valor de: R$${faturamento.valor?.toFixed(2).toString().replace('.', ',')} e com vencimento para: ${faturamento.dataVencimento?.toLocaleDateString('pt-BR')} que ${faturamento.dataPagamento ? 'já foi paga' : 'ainda não foi paga'}`,
             }
         })
 
