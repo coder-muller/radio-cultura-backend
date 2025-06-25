@@ -4,6 +4,7 @@ import express from "express";
 import categorias from "./routes/financeiro/categorias";
 import departamentos from "./routes/financeiro/departamentos";
 import lancamentos from "./routes/financeiro/lancamentos";
+import dashboard from "./routes/dashboard";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -18,6 +19,8 @@ app.use(cors())
 app.use("/financeiro/categorias", categorias);
 app.use("/financeiro/departamentos", departamentos);
 app.use("/financeiro/lancamentos", lancamentos);
+
+app.use("/dashboard", dashboard);
 
 app.get("/", (req, res) => {
     res.send("Bem vindo ao servidor da Radio Cultura!");
