@@ -13,13 +13,18 @@ router.get("/:chave", async (req, res) => {
         return;
     }
 
-    const categorias = await prisma.categoria.findMany({
-        where: {
-            chave: chave
-        }
-    });
+    try {
+        const categorias = await prisma.categoria.findMany({
+            where: {
+                chave: chave
+            }
+        });
 
-    res.json(categorias);
+        res.json(categorias);
+    } catch (error) {
+        console.error("Erro ao buscar categorias:", error);
+        res.status(500).json({ error: "Erro ao buscar categorias" });
+    }
 });
 
 router.post("/", async (req, res) => {
@@ -30,14 +35,28 @@ router.post("/", async (req, res) => {
         return;
     }
 
-    const categoria = await prisma.categoria.create({
-        data: {
-            chave,
-            descricao
-        }
-    });
+    try {
+        const categoria = await prisma.categoria.create({
+            data: {
+                chave,
+                descricao
+            }
+        });
 
-    res.json(categoria);
+        await prisma.logs.create({
+            data: {
+                chave: chave,
+                mensagem: "Categoria criada",
+                tipo: "Insersão",
+                tabela: "Categorias"
+            }
+        });
+
+        res.json(categoria);
+    } catch (error) {
+        console.error("Erro ao criar categoria:", error);
+        res.status(500).json({ error: "Erro ao criar categoria" });
+    }
 });
 
 router.put("/:id", async (req, res) => {
@@ -49,12 +68,26 @@ router.put("/:id", async (req, res) => {
         return;
     }
 
-    const categoria = await prisma.categoria.update({
-        where: { id: parseInt(id) },
-        data: { descricao }
-    });
+    try {
+        const categoria = await prisma.categoria.update({
+            where: { id: parseInt(id) },
+            data: { descricao }
+        });
 
-    res.json(categoria);
+        await prisma.logs.create({
+            data: {
+                chave: categoria.chave,
+                mensagem: "Categoria atualizada",
+                tipo: "Edição",
+                tabela: "Categorias"
+            }
+        });
+
+        res.json(categoria);
+    } catch (error) {
+        console.error("Erro ao atualizar categoria:", error);
+        res.status(500).json({ error: "Erro ao atualizar categoria" });
+    }
 });
 
 router.delete("/:id", async (req, res) => {
@@ -65,11 +98,26 @@ router.delete("/:id", async (req, res) => {
         return;
     }
 
-    const categoria = await prisma.categoria.delete({
-        where: { id: parseInt(id) }
-    });
+    try {
+        const categoria = await prisma.categoria.delete({
+            where: { id: parseInt(id) }
+        });
 
-    res.json(categoria);
+        await prisma.logs.create({
+
+            data: {
+                chave: categoria.chave,
+                mensagem: "Categoria deletada",
+                tipo: "Exclusão",
+                tabela: "Categorias"
+            }
+        });
+
+        res.json(categoria);
+    } catch (error) {
+        console.error("Erro ao deletar categoria:", error);
+        res.status(500).json({ error: "Erro ao deletar categoria" });
+    }
 });
 
 export default router;

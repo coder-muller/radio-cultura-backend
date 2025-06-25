@@ -13,11 +13,16 @@ router.get("/:chave", async (req, res) => {
         return;
     }
 
-    const departamentos = await prisma.departamento.findMany({
-        where: { chave: chave }
-    });
+    try {
+        const departamentos = await prisma.departamento.findMany({
+            where: { chave: chave }
+        });
 
-    res.json(departamentos);
+        res.json(departamentos);
+    } catch (error) {
+        console.error("Erro ao buscar departamentos:", error);
+        res.status(500).json({ error: "Erro ao buscar departamentos" });
+    }
 });
 
 router.post("/", async (req, res) => {
@@ -28,14 +33,28 @@ router.post("/", async (req, res) => {
         return;
     }
 
-    const departamento = await prisma.departamento.create({
-        data: {
-            chave,
-            descricao
-        }
-    });
+    try {
+        const departamento = await prisma.departamento.create({
+            data: {
+                chave,
+                descricao
+            }
+        });
 
-    res.json(departamento);
+        await prisma.logs.create({
+            data: {
+                chave: departamento.chave,
+                mensagem: "Departamento criado",
+                tipo: "Insersão",
+                tabela: "Departamentos"
+            }
+        });
+
+        res.json(departamento);
+    } catch (error) {
+        console.error("Erro ao criar departamento:", error);
+        res.status(500).json({ error: "Erro ao criar departamento" });
+    }
 });
 
 router.put("/:id", async (req, res) => {
@@ -47,12 +66,27 @@ router.put("/:id", async (req, res) => {
         return;
     }
 
-    const departamento = await prisma.departamento.update({
-        where: { id: parseInt(id) },
-        data: { descricao }
-    });
+    try {
+        const departamento = await prisma.departamento.update({
+            where: { id: parseInt(id) },
+            data: { descricao }
+        });
 
-    res.json(departamento);
+        await prisma.logs.create({
+
+            data: {
+                chave: departamento.chave,
+                mensagem: "Departamento atualizado",
+                tipo: "Edição",
+                tabela: "Departamentos"
+            }
+        });
+
+        res.json(departamento);
+    } catch (error) {
+        console.error("Erro ao atualizar departamento:", error);
+        res.status(500).json({ error: "Erro ao atualizar departamento" });
+    }
 });
 
 router.delete("/:id", async (req, res) => {
@@ -63,11 +97,26 @@ router.delete("/:id", async (req, res) => {
         return;
     }
 
-    const departamento = await prisma.departamento.delete({
-        where: { id: parseInt(id) }
-    });
+    try {
+        const departamento = await prisma.departamento.delete({
+            where: { id: parseInt(id) }
+        });
 
-    res.json(departamento);
+        await prisma.logs.create({
+
+            data: {
+                chave: departamento.chave,
+                mensagem: "Departamento deletado",
+                tipo: "Exclusão",
+                tabela: "Departamentos"
+            }
+        });
+
+        res.json(departamento);
+    } catch (error) {
+        console.error("Erro ao deletar departamento:", error);
+        res.status(500).json({ error: "Erro ao deletar departamento" });
+    }
 });
 
 export default router;

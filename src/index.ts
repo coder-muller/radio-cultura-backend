@@ -12,14 +12,12 @@ const app = express();
 const PORT = process.env.PORT || 5555;
 const prisma = new PrismaClient();
 
+app.use(express.json());
+app.use(cors())
+
 app.use("/financeiro/categorias", categorias);
 app.use("/financeiro/departamentos", departamentos);
 app.use("/financeiro/lancamentos", lancamentos);
-
-app.use(express.json());
-app.use(cors({
-    origin: "*"
-}))
 
 app.get("/", (req, res) => {
     res.send("Bem vindo ao servidor da Radio Cultura!");
