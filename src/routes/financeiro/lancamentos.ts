@@ -14,7 +14,12 @@ router.get("/:chave", async (req, res) => {
     }
 
     const lancamentos = await prisma.lancamento.findMany({
-        where: { chave: chave }
+        where: { chave: chave },
+        include: {
+            categoria: true,
+            departamento: true,
+            fatura: true
+        }
     });
 
     res.json(lancamentos);
@@ -49,7 +54,7 @@ router.post("/", async (req, res) => {
     }
 
     const lancamento = await prisma.lancamento.create({
-        data: { chave, descricao, valor: parseFloat(valor), data: new Date(data), natureza, categoriaId: parseInt(categoriaId), departamentoId: parseInt(departamentoId), faturaId: faturaId ? parseInt(faturaId) : null }
+        data: { chave, descricao, valor: parseFloat(valor), data: new Date(data + "T03:00:00.000Z"), natureza, categoriaId: parseInt(categoriaId), departamentoId: parseInt(departamentoId), faturaId: faturaId ? parseInt(faturaId) : null }
     });
 
     res.json(lancamento);
@@ -86,7 +91,7 @@ router.put("/:id", async (req, res) => {
 
     const lancamento = await prisma.lancamento.update({
         where: { id: parseInt(id) },
-        data: { descricao, valor: parseFloat(valor), data: new Date(data), natureza, categoriaId: parseInt(categoriaId), departamentoId: parseInt(departamentoId), faturaId: faturaId ? parseInt(faturaId) : null }
+        data: { descricao, valor: parseFloat(valor), data: new Date(data + "T03:00:00.000Z"), natureza, categoriaId: parseInt(categoriaId), departamentoId: parseInt(departamentoId), faturaId: faturaId ? parseInt(faturaId) : null }
     });
 
     res.json(lancamento);

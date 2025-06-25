@@ -856,7 +856,47 @@ app.put('/faturamento/:id/pagamento', async (req, res) => {
                 dataPagamento: new Date(dataPagamento),
                 formaPagamentoId: parseInt(formaPagamentoId),
             },
+            include: {
+                cliente: true
+            }
         });
+
+        const categoriaBase = await prisma.categoria.findFirst({
+            where: {
+                chave: faturamento.chave,
+                descricao: "Faturamento"
+            }
+        })
+
+        if (!categoriaBase) {
+            res.status(400).json({ error: "Categoria base não encontrada" });
+            return;
+        }
+
+        const departamentoBase = await prisma.departamento.findFirst({
+            where: {
+                chave: faturamento.chave,
+                descricao: "Empresa"
+            }
+        })
+
+        if (!departamentoBase) {
+            res.status(400).json({ error: "Departamento base não encontrada" });
+            return;
+        }
+
+        await prisma.lancamento.create({
+            data: {
+                chave: faturamento.chave,
+                descricao: "Recebido de " + faturamento.cliente.nomeFantasia,
+                valor: parseFloat(faturamento.valor?.toString() || "0"),
+                data: new Date(dataPagamento),
+                natureza: "receita",
+                categoriaId: categoriaBase.id,
+                departamentoId: departamentoBase.id,
+                faturaId: faturamento.id,
+            }
+        })
 
         await prisma.logs.create({
             data: {
@@ -886,6 +926,13 @@ app.delete("/faturamento/:id", async (req, res) => {
     }
 
     try {
+
+        await prisma.lancamento.deleteMany({
+            where: {
+                faturaId: id,
+            }
+        })
+
         const faturamento = await prisma.faturamento.delete({
             where: {
                 id: id,
