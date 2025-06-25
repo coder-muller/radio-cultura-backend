@@ -6,13 +6,23 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
+const categorias_1 = __importDefault(require("./routes/financeiro/categorias"));
+const departamentos_1 = __importDefault(require("./routes/financeiro/departamentos"));
+const lancamentos_1 = __importDefault(require("./routes/financeiro/lancamentos"));
+const dashboard_1 = __importDefault(require("./routes/dashboard"));
+const generate_1 = __importDefault(require("./routes/generate"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5555;
 const prisma = new client_1.PrismaClient();
 app.use(express_1.default.json());
-app.use((0, cors_1.default)({
-    origin: "*"
-}));
+app.use((0, cors_1.default)());
+app.use("/financeiro/categorias", categorias_1.default);
+app.use("/financeiro/departamentos", departamentos_1.default);
+app.use("/financeiro/lancamentos", lancamentos_1.default);
+app.use("/generate", generate_1.default);
+app.use("/dashboard", dashboard_1.default);
 app.get("/", (req, res) => {
     res.send("Bem vindo ao servidor da Radio Cultura!");
 });
@@ -647,6 +657,41 @@ app.put('/faturamento/:id/pagamento', async (req, res) => {
                 dataPagamento: new Date(dataPagamento),
                 formaPagamentoId: parseInt(formaPagamentoId),
             },
+            include: {
+                cliente: true
+            }
+        });
+        const categoriaBase = await prisma.categoria.findFirst({
+            where: {
+                chave: faturamento.chave,
+                descricao: "Faturamento"
+            }
+        });
+        if (!categoriaBase) {
+            res.status(400).json({ error: "Categoria base não encontrada" });
+            return;
+        }
+        const departamentoBase = await prisma.departamento.findFirst({
+            where: {
+                chave: faturamento.chave,
+                descricao: "Empresa"
+            }
+        });
+        if (!departamentoBase) {
+            res.status(400).json({ error: "Departamento base não encontrada" });
+            return;
+        }
+        await prisma.lancamento.create({
+            data: {
+                chave: faturamento.chave,
+                descricao: "Recebido de " + faturamento.cliente.nomeFantasia,
+                valor: parseFloat(faturamento.valor?.toString() || "0"),
+                data: new Date(dataPagamento),
+                natureza: "receita",
+                categoriaId: categoriaBase.id,
+                departamentoId: departamentoBase.id,
+                faturaId: faturamento.id,
+            }
         });
         await prisma.logs.create({
             data: {
@@ -670,6 +715,11 @@ app.delete("/faturamento/:id", async (req, res) => {
         return;
     }
     try {
+        await prisma.lancamento.deleteMany({
+            where: {
+                faturaId: id,
+            }
+        });
         const faturamento = await prisma.faturamento.delete({
             where: {
                 id: id,
