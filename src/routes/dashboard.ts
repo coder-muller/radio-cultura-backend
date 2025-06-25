@@ -140,7 +140,7 @@ router.get("/:chave", async (req: Request, res: Response): Promise<void> => {
             });
 
             const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            
+
             evolucaoFinanceira.push({
                 month: `${meses[data.getMonth()]}/${data.getFullYear()}`,
                 receitas: parseFloat(receitas._sum.valor?.toString() || "0"),
@@ -247,17 +247,147 @@ router.get("/:chave", async (req: Request, res: Response): Promise<void> => {
             percentual: totalMetodos > 0 ? parseFloat(((item.quantidade / totalMetodos) * 100).toFixed(1)) : 0
         }));
 
+        // Dados dos corretores - faturas pagas no mês atual
+        const faturasPagasMes = await prisma.faturamento.findMany({
+            where: {
+                chave: chave,
+                dataPagamento: {
+                    not: null,
+                    gte: primeiroDiaMes,
+                    lte: ultimoDiaMes
+                },
+                corretoresId: {
+                    not: null
+                }
+            },
+            include: {
+                contrato: true,
+                corretores: true
+            }
+        });
+
+        // Calcular comissões e receitas por corretor
+        const dadosCorretores = new Map();
+
+        for (const fatura of faturasPagasMes) {
+            if (fatura.corretores && fatura.contrato) {
+                const corretorId = fatura.corretores.id;
+                const nomeCorretor = fatura.corretores.nome;
+                const valorFatura = parseFloat(fatura.valor?.toString() || "0");
+                const porcentagemComissao = parseFloat(fatura.contrato.comissao?.toString() || "0");
+                const valorComissao = (valorFatura * porcentagemComissao) / 100;
+
+                if (!dadosCorretores.has(corretorId)) {
+                    dadosCorretores.set(corretorId, {
+                        id: corretorId,
+                        nome: nomeCorretor,
+                        totalComissao: 0,
+                        totalReceita: 0
+                    });
+                }
+
+                const dadosCorretor = dadosCorretores.get(corretorId);
+                dadosCorretor.totalComissao += valorComissao;
+                dadosCorretor.totalReceita += valorFatura;
+            }
+        }
+
+        // Converter para array e ordenar
+        const corretoresArray = Array.from(dadosCorretores.values());
+
+        // Corretor com maior comissão
+        const corretorMaiorComissao = corretoresArray.length > 0
+            ? corretoresArray.reduce((prev, current) =>
+                prev.totalComissao > current.totalComissao ? prev : current
+            )
+            : null;
+
+        // Corretor com maior receita
+        const corretorMaiorReceita = corretoresArray.length > 0
+            ? corretoresArray.reduce((prev, current) =>
+                prev.totalReceita > current.totalReceita ? prev : current
+            )
+            : null;
+
+        // Evolução de comissões dos últimos 4 meses
+        const evolucaoComissoes = [];
+        for (let i = 3; i >= 0; i--) {
+            const data = new Date();
+            data.setMonth(data.getMonth() - i);
+            const primeiroDia = new Date(data.getFullYear(), data.getMonth(), 1);
+            const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0);
+
+            const faturasComissaoMes = await prisma.faturamento.findMany({
+                where: {
+                    chave: chave,
+                    dataPagamento: {
+                        not: null,
+                        gte: primeiroDia,
+                        lte: ultimoDia
+                    },
+                    corretoresId: {
+                        not: null
+                    }
+                },
+                include: {
+                    contrato: true
+                }
+            });
+
+            let totalComissaoMes = 0;
+            for (const fatura of faturasComissaoMes) {
+                if (fatura.contrato) {
+                    const valorFatura = parseFloat(fatura.valor?.toString() || "0");
+                    const porcentagemComissao = parseFloat(fatura.contrato.comissao?.toString() || "0");
+                    totalComissaoMes += (valorFatura * porcentagemComissao) / 100;
+                }
+            }
+
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+            evolucaoComissoes.push({
+                month: `${meses[data.getMonth()]}/${data.getFullYear()}`,
+                comissoes: parseFloat(totalComissaoMes.toFixed(2))
+            });
+        }
+
+        // Evolução de clientes dos últimos 12 meses
+        const evolucaoClientes = [];
+        for (let i = 11; i >= 0; i--) {
+            const data = new Date();
+            data.setMonth(data.getMonth() - i);
+            const primeiroDia = new Date(data.getFullYear(), data.getMonth(), 1);
+            const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0);
+
+            const clientesNovosMes = await prisma.cliente.count({
+                where: {
+                    chave: chave,
+                    createdAt: {
+                        gte: primeiroDia,
+                        lte: ultimoDia
+                    }
+                }
+            });
+
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+            evolucaoClientes.push({
+                month: `${meses[data.getMonth()]}/${data.getFullYear()}`,
+                novosClientes: clientesNovosMes
+            });
+        }
+
         // Calcular percentuais de crescimento
         const receitaAtual = parseFloat(receitaMes._sum.valor?.toString() || "0");
         const receitaAnterior = parseFloat(receitaMesAnterior._sum.valor?.toString() || "0");
         const despesaAtual = parseFloat(despesaMes._sum.valor?.toString() || "0");
         const despesaAnterior = parseFloat(despesaMesAnterior._sum.valor?.toString() || "0");
 
-        const percentualReceitaCrescimento = receitaAnterior > 0 
+        const percentualReceitaCrescimento = receitaAnterior > 0
             ? parseFloat((((receitaAtual - receitaAnterior) / receitaAnterior) * 100).toFixed(1))
             : 0;
 
-        const percentualDespesaCrescimento = despesaAnterior > 0 
+        const percentualDespesaCrescimento = despesaAnterior > 0
             ? parseFloat((((despesaAtual - despesaAnterior) / despesaAnterior) * 100).toFixed(1))
             : 0;
 
@@ -280,7 +410,7 @@ router.get("/:chave", async (req: Request, res: Response): Promise<void> => {
                     quantidade: faturasPagas._count
                 },
                 {
-                    status: "Pendentes", 
+                    status: "Pendentes",
                     valor: parseFloat(faturasPendentes._sum.valor?.toString() || "0"),
                     quantidade: faturasPendentes._count
                 },
@@ -290,7 +420,15 @@ router.get("/:chave", async (req: Request, res: Response): Promise<void> => {
                     quantidade: quantidadeFaturasVencidas
                 }
             ],
-            metodosPagamento: metodosPagamentoComPercentual
+            metodosPagamento: metodosPagamentoComPercentual,
+            corretores: {
+                maiorComissao: corretorMaiorComissao,
+                maiorReceita: corretorMaiorReceita,
+                evolucaoComissoes: evolucaoComissoes
+            },
+            clientes: {
+                evolucaoClientes: evolucaoClientes
+            }
         });
 
     } catch (error) {
